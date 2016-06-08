@@ -97,4 +97,15 @@ class Category extends Model
             $this->save();
         }
     }
+
+    // for resizer functionality
+    public function getImageFields()
+    {
+        return ['cover_image'];
+    }
+
+    public function getImageType()
+    {
+        return 'category';
+    }
 }

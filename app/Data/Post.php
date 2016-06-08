@@ -472,4 +472,14 @@ class Post extends Model implements HasPresenter
 
         return $query->orderBy('views', 'asc');
     }
+
+    public function getImageFields()
+    {
+        return ['image', 'cover_image'];
+    }
+
+    public function getImageType()
+    {
+        return 'post';
+    }
 }

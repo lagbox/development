@@ -5,21 +5,47 @@ namespace Flashtag\Admin\Services;
 // intervention image facade
 use Image;
 
-abstract class Resizer
+class Resizer
 {
-    public static function sizes()
+    public $path = 'images/media/';
+
+    protected $type;
+
+    public static $sizes = [
+        'lg' => 600,
+        'md' => 400,
+        'sm' => 200,
+        'xs' => 80,
+    ];
+
+    public function __construct($path = null)
     {
-        // return some base set from config/settings
-        return [];
+        if ($path) {
+            $this->path = $path;
+        }
     }
 
-    public function doIt($file, $entity)
+    public static function sizes($sizes = null)
     {
+        return $sizes ? static::$sizes = $sizes : static::$sizes;
+    }
+
+    public function formatFilename($entity, $size, $imageField)
+    {
+        $extension = $this->getExtension($entity->$imageField);
+
+        return "{$entity->getImageType()}__{$entity->id}__{$entity->slug}__{$size}". $extension;
+    }
+
+    public function doIt($entity, $field)
+    {
+        $file = $entity->$field;
+
         // decide on pathing
         $image = Image::make($file);
 
         foreach ($this->formatSizes() as $size => $dems) {
-            $filename = $this->formatFilename($entity, $size, $file);
+            $filename = $this->formatFilename($entity, $size, $field);
             $this->resize($image, $dems);
             $this->save($image, $filename);
         }
@@ -59,25 +85,38 @@ abstract class Resizer
             'lg' => ['width' => ..., 'height' => ...]
          */
         foreach (static::sizes() as $key => $size) {
-            if (! is_array($sizes)) {
-                $sizes[$key] = ['width' => $size, 'height' => $size];
-            } elseif () {
-                $sizes[$key] = ['width' => $size[0], 'height' => $size[1]];
+            if (! is_array($size)) {
+                $f[$key] = ['width' => $size, 'height' => $size];
+            } elseif (! isset($size['width'])) {
+                $f[$key] = ['width' => $size[0], 'height' => $size[1]];
             } else {
-                $sizes[$key] = $size;
+                $f[$key] = $size;
             }
         }
+
+        return $f;
     }
 
-    protected static function getExtension($file)
+    protected function getExtension($file)
     {
         return pathinfo($file, PATHINFO_EXTENSION);
     }
+}
 
-    public static function formatFilename($entity, $size, $file = null)
-    {
-        $extension = static::getExtension($file ?: $entity->{static::$imageField});
 
-        return "{static::$name}__{$entity->id}__{$entity->slug}__{$size}". $extension;
+function getImagesForEntity($entity, $field = null)
+{
+    $resizer = app(Resizer::class);
+
+    $sizes = array_keys($resizer->sizes())
+
+    $fields = $field ? (array) $field : $entity->getImageFields();
+
+    foreach ($fields as $f) {
+        foreach ($sizes as $size) {
+            $names[$f][] = $resizer->formatFilename($entity, $size, $f);
+        }
     }
+
+    return $names;
 }
