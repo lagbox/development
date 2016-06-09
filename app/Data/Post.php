@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use McCool\LaravelAutoPresenter\HasPresenter;
+use Flashtag\Data\Events\ResizableImageCreated;
+use Flashtag\Data\Events\ResizableImageDeleted;
+use Flashtag\Data\Interfaces\HasResizableImages;
 use Venturecraft\Revisionable\RevisionableTrait;
 
 /**
@@ -38,7 +41,7 @@ use Venturecraft\Revisionable\RevisionableTrait;
  * @property \Illuminate\Database\Eloquent\Collection $ratings
  * @property \Illuminate\Database\Eloquent\Collection $revisionHistory
  */
-class Post extends Model implements HasPresenter
+class Post extends Model implements HasPresenter, HasResizableImages
 {
     use RevisionableTrait;
 
@@ -285,6 +288,8 @@ class Post extends Model implements HasPresenter
         // TODO: Generate thumbnails
 
         $this->save();
+
+        static::$dispatcher->fire(new ResizableImageCreated($this, 'image'));
     }
 
     /**
@@ -300,6 +305,8 @@ class Post extends Model implements HasPresenter
         $this->cover_image = $name;
 
         $this->save();
+
+        static::$dispatcher->fire(new ResizableImageCreated($this, 'cover_image'));
     }
 
     /**
@@ -327,6 +334,8 @@ class Post extends Model implements HasPresenter
 
             $this->image = null;
             $this->save();
+
+            static::$dispatcher->fire(new ResizableImageDeleted($this, $img, 'image'));
         }
     }
 
@@ -344,6 +353,8 @@ class Post extends Model implements HasPresenter
 
             $this->cover_image = null;
             $this->save();
+
+            static::$dispatcher->fire(new ResizableImageDeleted($this, $img, 'cover_image'));
         }
     }
 
@@ -472,6 +483,8 @@ class Post extends Model implements HasPresenter
 
         return $query->orderBy('views', 'asc');
     }
+
+    // implement HasResizableImages
 
     public function getImageFields()
     {
