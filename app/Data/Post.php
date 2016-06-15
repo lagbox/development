@@ -305,7 +305,14 @@ class Post extends Model implements HasPresenter
 
         $name = 'post-'. $this->id .'__'. $this->slug .'.'. $this->imageExtension($image);
         //$image->move(public_path('images/media'), $name);
-        $image->move(config('site.uploads.images.path'), $name);
+        //$image->move(config('site.uploads.images.path'), $name);
+
+        $defaults = config('site.images.storage');
+
+        Storage::disk($defaults['disk'])->put(
+            $defaults['path'] .'/'. $name,
+            file_get_contents($image)
+        );
 
         $this->image()->create(['original' => $name]);
     }
@@ -336,9 +343,16 @@ class Post extends Model implements HasPresenter
     public function addCoverImage($image)
     {
         $this->removeCoverImage();
+
         $name = 'post-'.$this->id.'__cover__'.$this->slug.'.'.$this->imageExtension($image);
-        //$image->move(public_path('images/media'), $name);
-        $image->move(config('site.uploads.images.path'), $name);
+
+        $defaults = config('site.images.storage');
+
+        Storage::disk($defaults['disk'])->put(
+            $defaults['path'] .'/'. $name,
+            file_get_contents($image->getRealPath())
+        );
+
         $this->cover_image = $name;
 
         $this->save();
@@ -386,10 +400,15 @@ class Post extends Model implements HasPresenter
     public function removeCoverImage()
     {
         if (! is_null($this->cover_image)) {
-            $img = '/public/images/media/' . $this->cover_image;
+            $defaults = config('site.images.storage');
 
-            if (is_file(base_path($img))) {
-                Storage::delete($img);
+            $img = $defaults['path'] .'/'. $this->cover_image;
+
+            $storage = Storage::disk($defaults['disk']);
+
+            if ($storage->has($img)) {
+            //if (is_file(base_path($img))) {
+                $storage->delete($img);
             }
 
             $this->cover_image = null;

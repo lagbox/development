@@ -7,8 +7,15 @@ use Flashtag\Data\Services\Resizer;
 
 class ResizableImageSubscriber
 {
+    /**
+     * \Flashtag\Data\Services\Resizer
+     */
     protected $resizer;
 
+    /**
+     * @param  \Flashtag\Data\Services\Resizer $resizer
+     * @return void
+     */
     public function __construct(Resizer $resizer)
     {
         $this->resizer = $resizer;
@@ -21,37 +28,33 @@ class ResizableImageSubscriber
 
     public function onDelete(Resizable $model)
     {
-        foreach (array_keys(Resizer::sizes()) as $size) {
+        $defaults = config('sites.images.storage');
+
+        $storage = Storage::disk($defaults['disk']);
+
+        $path = $defaults['path'];
+
+        foreach (array_keys($this->resizer->sizes()) as $size) {
             $file = $model->{$size};
 
-            $config = config('sites.uploads.images');
+            $img = $path .'/'. $file;
 
-            if ($config['default'] == 'path') {
-                //
-            } else {
-                $storage = Storage::disk($config['storage']['disk']);
-                //
+            if ($storage->has($img)) {
+                $storage->delete($img);
             }
-            // if file exists
-            //    delete file
         }
     }
 
     public function subscribe($events)
     {
         $events->listen(
-            'eloquent.deleting: Resizable',
+            'eloquent.deleting: '. Resizable::class,
             self::class .'@onDelete'
         );
 
         $events->listen(
-            'eloquent.created: Resizable',
+            'eloquent.created: '. Resizable::class,
             self::class .'@onCreate'
         );
     }
 }
-/*
-@TODO:
-need to decide where to put the path information
-    config should work to remove hardcoded paths throughout models and resizer
- */

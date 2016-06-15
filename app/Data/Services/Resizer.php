@@ -2,15 +2,16 @@
 
 namespace Flashtag\Data\Services;
 
-// intervention image facade
 use Image;
 use Flashtag\Data\Resizable;
+use Illuminate\Config\Repository as Config;
+use Illuminate\Contracts\Filesystem\Factory as Storage;
 
 class Resizer
 {
-    protected $path = 'images/media/';
+    protected $path;
 
-    protected $type;
+    protected $disk;
 
     public static $sizes = [
         'lg' => 600,
@@ -19,55 +20,76 @@ class Resizer
         'xs' => 80,
     ];
 
-    public function __construct($path = null)
+    /**
+     *
+     * @param  string|null $disk
+     * @param  string|null $path
+     * @return void
+     */
+    public function __construct(Config $config, Storage $storage)
     {
-        if ($path) {
-            $this->setPath($path);
-        }
+        $this->disk = $storage->disk(
+            $config->get('site.images.storage.disk', 'local')
+        );
+
+        $this->path = $config->get('site.images.storage.path', 'public/images/media');
     }
 
-    public function getPath()
-    {
-        return $this->path;
-    }
-
-    public function setPath($path)
-    {
-        $this->path = $path;
-    }
-
+    /**
+     * Get or set the sizes
+     *
+     * @param  array|null $sizes
+     * @return array
+     */
     public static function sizes($sizes = null)
     {
         return $sizes ? static::$sizes = $sizes : static::$sizes;
     }
 
+    /**
+     * Do the resizing for the Resizable images sizes
+     *
+     * @param  \Flashtag\Data\Resizable $entity
+     * @return void
+     */
     public function doIt(Resizable $entity)
     {
         $file = $entity->original;
 
-        $file = config('site.uploads.images.path') .'/'. $file;
+        $image = Image::make($this->disk->get($this->path .'/'. $file));
 
-        $image = Image::make($file);
+        $filename = $file;
 
         foreach ($this->formatSizes() as $size => $dems) {
-            $filename = $this->formatFilename($entity, $size);
-            $this->resize($image, $dems);
-            $this->save($image, $filename);
+            if ($this->resize($image, $dems)) {
+                // get a new filename and save the resized image
+                $filename = $this->formatFileName($file, $size);
+                $this->save($image, $filename);
+            }
+
             $entity->{$size} = $filename;
         }
 
         $entity->save();
     }
 
+    /**
+     * Resize our image to defined dimensions
+     *
+     * @param  \Intervention\Image\Image $img
+     * @param  array $dems  the dimensions
+     * @return bool
+     */
     protected function resize($img, $dems)
     {
         // check if there is a need to resize based on dimensions passed
         if ($img->height() < $dems['height'] && $img->width() < $dems['width']) {
             return false;
         }
+
         // resize to dimensions
-        //  respecting aspectRatio and never upsizing
         $img->resize($dems['width'], $dems['height'], function ($con) {
+            //  respect aspectRatio and never upsize
             $con->aspectRatio();
             $con->upsize();
         });
@@ -75,20 +97,26 @@ class Resizer
         return true;
     }
 
+    /**
+     * Save the Image to disk
+     *
+     * @param  \Intervention\Image\Image $img
+     * @param  string $name
+     * @param  string|null $path
+     * @return void
+     */
     protected function save($img, $name, $path = null)
     {
         $path = $path ?: $this->path;
 
-        //public_path('images/media');
-        if (config('site.uploads.images.default') == 'path') {
-            $img->save(config('site.uploads.images.path'). '/'. $name);
-        } else {
-            $path = config('site.uploads.images.storage.path');
-            $disk = config('site.uploads.images.storage.disk');
-            Storage::disk($disk)->put($path. '/'. $name, $img->stream());
-        }
+        $this->disk->put($path .'/'. $name, $img->stream());
     }
 
+    /**
+     * Format the sizes to a standard format
+     *
+     * @return void
+     */
     protected function formatSizes()
     {
         /*
@@ -112,10 +140,17 @@ class Resizer
         return $f;
     }
 
-    protected function formatFileName($entity, $size)
+    /**
+     * Format the Filename for the entity and size
+     *
+     * @param  string $original Original filename
+     * @param  string $size
+     * @return string
+     */
+    protected function formatFileName($original, $size)
     {
-        $extension = pathinfo($entity->original, PATHINFO_EXTENSION);
-        $filename = pathinfo($entity->original, PATHINFO_FILENAME);
+        $extension = pathinfo($original, PATHINFO_EXTENSION);
+        $filename = pathinfo($original, PATHINFO_FILENAME);
 
         return "$filename__{$size}.{$extension}";
     }

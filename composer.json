@@ -16,7 +16,8 @@
         "fzaninotto/faker": "~1.4",
         "guzzlehttp/guzzle": "^6.1",
         "flashtag-themes/clean-creative": "dev-master",
-        "symfony/filesystem": "^3.0"
+        "symfony/filesystem": "^3.0",
+        "intervention/image": "^2.3"
     },
     "require-dev": {
         "laravel/homestead": "^2.1",

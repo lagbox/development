@@ -7,6 +7,7 @@ use Flashtag\Data\Settings\Settings;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\ServiceProvider;
 use Flashtag\Data\Settings\SettingsMiddleware;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Flashtag\Data\Presenters\Decorators\ModelDecorator;
 use McCool\LaravelAutoPresenter\Decorators\AtomDecorator;
 use McCool\LaravelAutoPresenter\AutoPresenterServiceProvider;
@@ -40,6 +41,11 @@ class DataServiceProvider extends ServiceProvider
         $this->registerPublishes();
 
         $kernel->pushMiddleware(SettingsMiddleware::class);
+
+        // morph mapping
+        Relation::morphMap([
+            'post' => \Flashtag\Data\Post::class,
+        ]);
     }
 
     /**
