@@ -2,8 +2,8 @@
 
 namespace Flashtag\Data\Listeners;
 
+use Flashtag\Data\Resizable;
 use Flashtag\Data\Services\Resizer;
-use Flashtag\Data\Events\ResizableImageDeleted;
 
 class ResizableImageSubscriber
 {
@@ -14,32 +14,38 @@ class ResizableImageSubscriber
         $this->resizer = $resizer;
     }
 
-    public function onCreate(ResizeableImageCreated $event)
+    public function onCreate(Resizable $model)
     {
-        $this->resizer->doIt($event->entity, $event->type);
+        $this->resizer->doIt($model);
     }
 
-    public function onDelete(ResizableImageDeleted $event)
+    public function onDelete(Resizable $model)
     {
-        $file = basename($event->file);
+        foreach (array_keys(Resizer::sizes()) as $size) {
+            $file = $model->{$size};
 
-        $names = $this->resizer->getImagesForEntity($event->entity, $event->type, $file);
+            $config = config('sites.uploads.images');
 
-        // spin through and remove those images
-        foreach ($names[$event->type] as $filename) {
-            // delete $filename
+            if ($config['default'] == 'path') {
+                //
+            } else {
+                $storage = Storage::disk($config['storage']['disk']);
+                //
+            }
+            // if file exists
+            //    delete file
         }
     }
 
     public function subscribe($events)
     {
         $events->listen(
-            ResizeableImageDeleted::class,
+            'eloquent.deleting: Resizable',
             self::class .'@onDelete'
         );
 
         $events->listen(
-            ResizeableImageCreated::class,
+            'eloquent.created: Resizable',
             self::class .'@onCreate'
         );
     }

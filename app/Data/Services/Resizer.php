@@ -4,7 +4,7 @@ namespace Flashtag\Data\Services;
 
 // intervention image facade
 use Image;
-use Flashtag\Data\Interfaces\HasResizableImages;
+use Flashtag\Data\Resizable;
 
 class Resizer
 {
@@ -41,18 +41,22 @@ class Resizer
         return $sizes ? static::$sizes = $sizes : static::$sizes;
     }
 
-    public function doIt(HasResizableImages $entity, $field)
+    public function doIt(Resizable $entity)
     {
-        $file = $entity->$field;
+        $file = $entity->original;
 
-        // decide on pathing
+        $file = config('site.uploads.images.path') .'/'. $file;
+
         $image = Image::make($file);
 
         foreach ($this->formatSizes() as $size => $dems) {
-            $filename = $this->formatFilename($entity, $size, $field);
+            $filename = $this->formatFilename($entity, $size);
             $this->resize($image, $dems);
             $this->save($image, $filename);
+            $entity->{$size} = $filename;
         }
+
+        $entity->save();
     }
 
     protected function resize($img, $dems)
@@ -75,7 +79,14 @@ class Resizer
     {
         $path = $path ?: $this->path;
 
-        Storage::disk('public')->put($path. $name, $img->stream());
+        //public_path('images/media');
+        if (config('site.uploads.images.default') == 'path') {
+            $img->save(config('site.uploads.images.path'). '/'. $name);
+        } else {
+            $path = config('site.uploads.images.storage.path');
+            $disk = config('site.uploads.images.storage.disk');
+            Storage::disk($disk)->put($path. '/'. $name, $img->stream());
+        }
     }
 
     protected function formatSizes()
@@ -101,37 +112,11 @@ class Resizer
         return $f;
     }
 
-    public function formatFilename(HasResizableImages $entity, $size, $imageField, $file = null)
+    protected function formatFileName($entity, $size)
     {
-        $extension = $this->getExtension($file ?: $entity->$imageField);
+        $extension = pathinfo($entity->original, PATHINFO_EXTENSION);
+        $filename = pathinfo($entity->original, PATHINFO_FILENAME);
 
-        return "{$entity->getImageType()}__{$entity->id}__{$entity->slug}__{$size}". $extension;
+        return "$filename__{$size}.{$extension}";
     }
-
-
-    protected function getExtension($file)
-    {
-        return pathinfo($file, PATHINFO_EXTENSION);
-    }
-
-    public function getImagesForEntity(HasResizableImages $entity, $field = null, $file = null)
-    {
-        $sizes = array_keys($resizer->sizes());
-
-        $fields = $field ? (array) $field : $entity->getImageFields();
-
-        foreach ($fields as $f) {
-            foreach ($sizes as $size) {
-                $names[$f][] = $resizer->formatFilename($entity, $size, $f, $file);
-            }
-        }
-
-        return $names;
-    }
-}
-
-
-function getImagesForEntity(HasResizableImages $entity, $field = null)
-{
-    return app(Resizer::class)->getImagesForEntity($entity, $field);
 }

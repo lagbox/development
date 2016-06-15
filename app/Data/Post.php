@@ -9,9 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use McCool\LaravelAutoPresenter\HasPresenter;
-use Flashtag\Data\Events\ResizableImageCreated;
-use Flashtag\Data\Events\ResizableImageDeleted;
-use Flashtag\Data\Interfaces\HasResizableImages;
 use Venturecraft\Revisionable\RevisionableTrait;
 
 /**
@@ -41,7 +38,7 @@ use Venturecraft\Revisionable\RevisionableTrait;
  * @property \Illuminate\Database\Eloquent\Collection $ratings
  * @property \Illuminate\Database\Eloquent\Collection $revisionHistory
  */
-class Post extends Model implements HasPresenter, HasResizableImages
+class Post extends Model implements HasPresenter
 {
     use RevisionableTrait;
 
@@ -164,6 +161,18 @@ class Post extends Model implements HasPresenter, HasResizableImages
         return $this->belongsTo(User::class, 'locked_by_id');
     }
 
+
+
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\MorphPone
+     */
+    public function image()
+    {
+        return $this->morphOne(Resizable::class, 'resizable');
+    }
+
+
     /**
      * Lock the post.
      *
@@ -278,18 +287,45 @@ class Post extends Model implements HasPresenter, HasResizableImages
      *
      * @param \Symfony\Component\HttpFoundation\File\UploadedFile $image
      */
+    //public function addImage($image)
+    //{
+    //    $this->removeImage();
+    //    $name = 'post-'.$this->id.'__'.$this->slug.'.'.$this->imageExtension($image);
+    //    $image->move(public_path('images/media'), $name);
+    //    $this->image = $name;
+    //
+    //    // TODO: Generate thumbnails
+    //
+    //    $this->save();
+    //}
+
     public function addImage($image)
     {
         $this->removeImage();
-        $name = 'post-'.$this->id.'__'.$this->slug.'.'.$this->imageExtension($image);
-        $image->move(public_path('images/media'), $name);
-        $this->image = $name;
 
-        // TODO: Generate thumbnails
+        $name = 'post-'. $this->id .'__'. $this->slug .'.'. $this->imageExtension($image);
+        //$image->move(public_path('images/media'), $name);
+        $image->move(config('site.uploads.images.path'), $name);
 
-        $this->save();
+        $this->image()->create(['original' => $name]);
+    }
 
-        static::$dispatcher->fire(new ResizableImageCreated($this, 'image'));
+    public function removeImage()
+    {
+        if ($this->image) {
+            $this->image->delete();
+        }
+    }
+
+    public function getImageBySize($size = null)
+    {
+        if ($this->image) {
+            if (is_null($size)) {
+                return $this->image->lg;
+            }
+
+            return $this->image->{$size};
+        }
     }
 
     /**
@@ -301,12 +337,11 @@ class Post extends Model implements HasPresenter, HasResizableImages
     {
         $this->removeCoverImage();
         $name = 'post-'.$this->id.'__cover__'.$this->slug.'.'.$this->imageExtension($image);
-        $image->move(public_path('images/media'), $name);
+        //$image->move(public_path('images/media'), $name);
+        $image->move(config('site.uploads.images.path'), $name);
         $this->cover_image = $name;
 
         $this->save();
-
-        static::$dispatcher->fire(new ResizableImageCreated($this, 'cover_image'));
     }
 
     /**
@@ -315,29 +350,35 @@ class Post extends Model implements HasPresenter, HasResizableImages
      */
     private function imageExtension($image)
     {
-        $parts = explode('.', $image->getClientOriginalName());
+        //$parts = explode('.', $image->getClientOriginalName());
+        //
+        //return array_pop($parts);
 
-        return array_pop($parts);
+        $extension = $image->guessExtension();
+
+        if (is_null($extension)) {
+            $extension = pathinfo($image->getClientOriginalName(), PATHINFO_EXTENSION);
+        }
+
+        return $extension;
     }
 
     /**
      * Remove an image from a post and delete it.
      */
-    public function removeImage()
-    {
-        if (! is_null($this->image)) {
-            $img = '/public/images/media/' . $this->image;
-
-            if (is_file(base_path($img))) {
-                Storage::delete($img);
-            }
-
-            $this->image = null;
-            $this->save();
-
-            static::$dispatcher->fire(new ResizableImageDeleted($this, $img, 'image'));
-        }
-    }
+    //public function removeImage()
+    //{
+    //    if (! is_null($this->image)) {
+    //        $img = '/public/images/media/' . $this->image;
+    //
+    //        if (is_file(base_path($img))) {
+    //            Storage::delete($img);
+    //        }
+    //
+    //        $this->image = null;
+    //        $this->save();
+    //    }
+    //}
 
     /**
      * Remove an image from a post and delete it.
@@ -353,8 +394,6 @@ class Post extends Model implements HasPresenter, HasResizableImages
 
             $this->cover_image = null;
             $this->save();
-
-            static::$dispatcher->fire(new ResizableImageDeleted($this, $img, 'cover_image'));
         }
     }
 
@@ -482,17 +521,5 @@ class Post extends Model implements HasPresenter, HasResizableImages
         }
 
         return $query->orderBy('views', 'asc');
-    }
-
-    // implement HasResizableImages
-
-    public function getImageFields()
-    {
-        return ['image', 'cover_image'];
-    }
-
-    public function getImageType()
-    {
-        return 'post';
     }
 }

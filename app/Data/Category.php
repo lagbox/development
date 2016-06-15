@@ -4,9 +4,7 @@ namespace Flashtag\Data;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
-use Flashtag\Data\Events\ResizableImageCreated;
-use Flashtag\Data\Events\ResizableImageDeleted;
-use Flashtag\Data\Interfaces\HasResizableImages;
+
 /**
  * Class Category
  * @package Flashtag\Data
@@ -15,7 +13,7 @@ use Flashtag\Data\Interfaces\HasResizableImages;
  * @property \Illuminate\Database\Eloquent\Collection $tags
  * @property \Flashtag\Data\Media $media
  */
-class Category extends Model implements HasResizableImages
+class Category extends Model
 {
     use AttachesMedia;
 
@@ -81,8 +79,6 @@ class Category extends Model implements HasResizableImages
         $this->cover_image = $name;
 
         $this->save();
-
-        static::$dispatcher->fire(new ResizableImageCreated($this, 'cover_image'));
     }
 
     /**
@@ -99,26 +95,6 @@ class Category extends Model implements HasResizableImages
 
             $this->cover_image = null;
             $this->save();
-
-            static::$dispatcher->fire(new ResizableImageDeleted($this, $img, 'cover_image'));
         }
-    }
-
-    /*
-    @TODO:
-    Also need to decide if the methods in this model are using that trait or
-    just redeclaring those methods regardless.
-     */
-
-    // implements HasResizableImages
-
-    public function getImageFields()
-    {
-        return ['cover_image'];
-    }
-
-    public function getImageType()
-    {
-        return 'category';
     }
 }
