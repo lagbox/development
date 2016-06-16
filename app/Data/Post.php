@@ -287,25 +287,11 @@ class Post extends Model implements HasPresenter
      *
      * @param \Symfony\Component\HttpFoundation\File\UploadedFile $image
      */
-    //public function addImage($image)
-    //{
-    //    $this->removeImage();
-    //    $name = 'post-'.$this->id.'__'.$this->slug.'.'.$this->imageExtension($image);
-    //    $image->move(public_path('images/media'), $name);
-    //    $this->image = $name;
-    //
-    //    // TODO: Generate thumbnails
-    //
-    //    $this->save();
-    //}
-
     public function addImage($image)
     {
         $this->removeImage();
 
         $name = 'post-'. $this->id .'__'. $this->slug .'.'. $this->imageExtension($image);
-        //$image->move(public_path('images/media'), $name);
-        //$image->move(config('site.uploads.images.path'), $name);
 
         $defaults = config('site.images.storage');
 
@@ -317,6 +303,11 @@ class Post extends Model implements HasPresenter
         $this->image()->create(['original' => $name]);
     }
 
+    /**
+     * Remove the resizable image attached to the post
+     *
+     * @return void
+     */
     public function removeImage()
     {
         if ($this->image) {
@@ -324,6 +315,12 @@ class Post extends Model implements HasPresenter
         }
     }
 
+    /**
+     * Get the resizable image name by size
+     *
+     * @param  string|null $size
+     * @return string|null
+     */
     public function getImageBySize($size = null)
     {
         if ($this->image) {
@@ -364,10 +361,6 @@ class Post extends Model implements HasPresenter
      */
     private function imageExtension($image)
     {
-        //$parts = explode('.', $image->getClientOriginalName());
-        //
-        //return array_pop($parts);
-
         $extension = $image->guessExtension();
 
         if (is_null($extension)) {
@@ -376,23 +369,6 @@ class Post extends Model implements HasPresenter
 
         return $extension;
     }
-
-    /**
-     * Remove an image from a post and delete it.
-     */
-    //public function removeImage()
-    //{
-    //    if (! is_null($this->image)) {
-    //        $img = '/public/images/media/' . $this->image;
-    //
-    //        if (is_file(base_path($img))) {
-    //            Storage::delete($img);
-    //        }
-    //
-    //        $this->image = null;
-    //        $this->save();
-    //    }
-    //}
 
     /**
      * Remove an image from a post and delete it.

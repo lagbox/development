@@ -15,8 +15,7 @@ class CreateResizableImagesTableMigration extends Migration
         Schema::create('resizables', function (Blueprint $table) {
             $table->increments('id');
 
-            $table->string('resizable_type');
-            $table->integer('resizable_id')->nullable();
+            $table->morphs('resizable');
 
             $table->string('original');
             $table->string('lg')->nullable();

@@ -152,6 +152,6 @@ class Resizer
         $extension = pathinfo($original, PATHINFO_EXTENSION);
         $filename = pathinfo($original, PATHINFO_FILENAME);
 
-        return "$filename__{$size}.{$extension}";
+        return "{$filename}__{$size}.{$extension}";
     }
 }

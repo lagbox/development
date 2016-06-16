@@ -4,6 +4,7 @@ namespace Flashtag\Data\Listeners;
 
 use Flashtag\Data\Resizable;
 use Flashtag\Data\Services\Resizer;
+use Illuminate\Support\Facades\Storage;
 
 class ResizableImageSubscriber
 {
@@ -28,14 +29,22 @@ class ResizableImageSubscriber
 
     public function onDelete(Resizable $model)
     {
-        $defaults = config('sites.images.storage');
+        $defaults = config('site.images.storage');
 
         $storage = Storage::disk($defaults['disk']);
 
         $path = $defaults['path'];
 
-        foreach (array_keys($this->resizer->sizes()) as $size) {
+        // get sizes and add original to it
+
+        $sizes = array_keys($this->resizer->sizes());
+
+        array_unshift($sizes, 'original');
+
+        foreach ($sizes as $size) {
             $file = $model->{$size};
+
+            if (! $file) { continue; }
 
             $img = $path .'/'. $file;
 
