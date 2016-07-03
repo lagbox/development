@@ -13,6 +13,9 @@ class Resizer
 
     protected $disk;
 
+    // closure
+    protected $formatter;
+
     public static $sizes = [
         'lg' => 600,
         'md' => 400,
@@ -33,6 +36,12 @@ class Resizer
         );
 
         $this->path = $config->get('site.images.storage.path', 'public/images/media');
+
+        $this->formatter = $config->get('site.images.format');
+
+        if ($config->has('site.images.sizes')) {
+            static::$sizes = $config->get('site.images.sizes');
+        }
     }
 
     /**
@@ -89,6 +98,7 @@ class Resizer
 
         // resize to dimensions
         $img->resize($dems['width'], $dems['height'], function ($con) {
+
             //  respect aspectRatio and never upsize
             $con->aspectRatio();
             $con->upsize();
@@ -151,6 +161,10 @@ class Resizer
     {
         $extension = pathinfo($original, PATHINFO_EXTENSION);
         $filename = pathinfo($original, PATHINFO_FILENAME);
+
+        if ($this->formatter) {
+            return call_user_func_array($this->formatter, [$filename, $extension, $size]);
+        }
 
         return "{$filename}__{$size}.{$extension}";
     }

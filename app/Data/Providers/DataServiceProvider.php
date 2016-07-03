@@ -22,6 +22,11 @@ class DataServiceProvider extends ServiceProvider
     protected $providers = [
         AutoPresenterServiceProvider::class,
         EventServiceProvider::class,
+        \Intervention\Image\ImageServiceProvider::class,
+    ];
+
+    protected $aliases = [
+        'Image' => \Intervention\Image\Facades\Image::class,
     ];
 
     /**
@@ -31,6 +36,7 @@ class DataServiceProvider extends ServiceProvider
     {
         $this->registerBindings();
         $this->registerServiceProviders();
+        $this->registerAliases();
     }
 
     /**
@@ -55,6 +61,18 @@ class DataServiceProvider extends ServiceProvider
     {
         foreach ($this->providers as $provider) {
             $this->app->register($provider);
+        }
+    }
+
+    /**
+     * Register the aliases from vendor packages.
+     */
+    protected function registerAliases()
+    {
+        $loader = \Illuminate\Foundation\AliasLoader::getInstance();
+
+        foreach ($this->aliases as $alias => $class) {
+            $loader->alias($alias, $class);
         }
     }
 

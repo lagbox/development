@@ -161,9 +161,6 @@ class Post extends Model implements HasPresenter
         return $this->belongsTo(User::class, 'locked_by_id');
     }
 
-
-
-
     /**
      * @return \Illuminate\Database\Eloquent\Relations\MorphPone
      */
@@ -171,7 +168,6 @@ class Post extends Model implements HasPresenter
     {
         return $this->morphOne(Resizable::class, 'resizable');
     }
-
 
     /**
      * Lock the post.

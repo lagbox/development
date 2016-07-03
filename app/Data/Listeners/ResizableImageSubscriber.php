@@ -57,7 +57,7 @@ class ResizableImageSubscriber
     public function subscribe($events)
     {
         $events->listen(
-            'eloquent.deleting: '. Resizable::class,
+            'eloquent.deleted: '. Resizable::class,
             self::class .'@onDelete'
         );
 
